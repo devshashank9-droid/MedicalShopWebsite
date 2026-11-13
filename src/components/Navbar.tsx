@@ -4,8 +4,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Phone,
-  MessageCircle,
   MapPin,
   Menu,
   X,
@@ -74,15 +72,6 @@ export default function Navbar() {
   const isEffectiveOpen =
     ownerMode === "auto" ? status?.isOpen : ownerMode === "open";
 
-  const whatsappDirectUrl = `https://wa.me/${PHARMACY_CONFIG.whatsappNumber.replace(
-    /\D/g,
-    ""
-  )}?text=${encodeURIComponent(
-    lang === "hi"
-      ? `नमस्ते ${PHARMACY_CONFIG.name}, मुझे एक दवाई के बारे में पूछना है।`
-      : `Hello ${PHARMACY_CONFIG.name}, I want to ask about a medicine.`
-  )}`;
-
   return (
     <header className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-slate-950/90">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
@@ -95,11 +84,6 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-xl">
                 {lang === "hi" ? "काजल मेडिकल हॉल" : PHARMACY_CONFIG.name}
-              </span>
-              <span className="hidden rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300 sm:inline-block">
-                {lang === "hi"
-                  ? "32 साल का विश्वास • 1994 से"
-                  : `32 Years • Est. ${PHARMACY_CONFIG.establishedYear}`}
               </span>
             </div>
             <p className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
@@ -184,24 +168,6 @@ export default function Navbar() {
               <Moon className="h-4 w-4" />
             )}
           </button>
-
-          <a
-            href={`tel:${PHARMACY_CONFIG.phoneDisplay.replace(/\s+/g, "")}`}
-            className="hidden items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 sm:inline-flex"
-          >
-            <Phone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <span>{lang === "hi" ? "कॉल" : "Call"}</span>
-          </a>
-
-          <a
-            href={whatsappDirectUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#25D366] px-3 py-2 text-xs font-extrabold text-slate-950 shadow-xs transition hover:bg-[#20bd5a] sm:px-3.5"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span>{lang === "hi" ? "व्हाट्सएप" : "WhatsApp"}</span>
-          </a>
 
           {/* Mobile Navigation Drawer Toggle */}
           <button

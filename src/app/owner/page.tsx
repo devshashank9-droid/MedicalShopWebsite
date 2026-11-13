@@ -110,6 +110,7 @@ export default function OwnerPage() {
   const [symptoms, setSymptoms] = useState<SymptomCategory[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Stock Form State
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [stockCategory, setStockCategory] = useState<
     "Human Healthcare" | "Veterinary"
@@ -119,6 +120,15 @@ export default function OwnerPage() {
   const [stockDescription, setStockDescription] = useState("");
   const [stockUnit, setStockUnit] = useState("In Stock");
 
+  // Symptom Category Form State (Add / Edit Symptom Problem)
+  const [editingSymptomCatId, setEditingSymptomCatId] = useState<string | null>(
+    null
+  );
+  const [symProblem, setSymProblem] = useState("");
+  const [symHindiLabel, setSymHindiLabel] = useState("");
+  const [symDescription, setSymDescription] = useState("");
+
+  // Symptom Medicine Form State
   const [selectedSymptomId, setSelectedSymptomId] = useState<string>("");
   const [medName, setMedName] = useState("");
   const [medAgeGroup, setMedAgeGroup] = useState("Adults");
@@ -170,10 +180,10 @@ export default function OwnerPage() {
       setCategories(getStoreCategories());
       const loadedSymptoms = getSymptomGuide();
       setSymptoms(loadedSymptoms);
-      setSelectedSymptomId(
-        (prev) =>
-          prev || (loadedSymptoms.length > 0 ? loadedSymptoms[0].id : ""),
-      );
+      setSelectedSymptomId((prev) => {
+        if (prev && loadedSymptoms.some((s) => s.id === prev)) return prev;
+        return loadedSymptoms.length > 0 ? loadedSymptoms[0].id : "";
+      });
     };
 
     syncFromStore();
@@ -201,12 +211,12 @@ export default function OwnerPage() {
         setPasswordInput("");
       } else if (res.status === 404) {
         setAuthError(
-          "Login API route not found (404). Make sure src/app/api/owner-login/route.ts exists.",
+          "Login API route not found (404). Make sure src/app/api/owner-login/route.ts exists."
         );
       } else {
         const data = await res.json().catch(() => ({}));
         setAuthError(
-          data.message || "Incorrect owner password. Please try again.",
+          data.message || "Incorrect owner password. Please try again."
         );
       }
     } catch {
@@ -236,8 +246,8 @@ export default function OwnerPage() {
         mode === "open"
           ? "WE ARE OPEN"
           : mode === "closed"
-            ? "WE ARE CLOSED"
-            : "Automatic Schedule (7 AM - 9 PM)";
+          ? "WE ARE CLOSED"
+          : "Automatic Schedule (7 AM - 9 PM)";
       showToast(`Live signboard updated for all visitors: ${label}`);
     } catch (err) {
       handleSaveError(err);
@@ -255,7 +265,7 @@ export default function OwnerPage() {
         setBoardMode("closed");
         await setOwnerBoardMode("closed");
         showToast(
-          `Live update sent: Shop closed, will open at ${reopenTime.trim()}`,
+          `Live update sent: Shop closed, will open at ${reopenTime.trim()}`
         );
       } else {
         showToast("Custom opening time cleared.");
@@ -277,7 +287,7 @@ export default function OwnerPage() {
   };
 
   const handleOwnerPhotoUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -326,7 +336,7 @@ export default function OwnerPage() {
               description: stockDescription.trim(),
               unit: stockUnit.trim() || "In Stock",
             }
-          : item,
+          : item
       );
     } else {
       const newItem: StoreCategoryItem = {
@@ -346,7 +356,7 @@ export default function OwnerPage() {
       showToast(
         editingStockId
           ? "Medicine stock updated live!"
-          : "New medicine stock published live!",
+          : "New medicine stock published live!"
       );
       resetStockForm();
     } catch (err) {
@@ -375,6 +385,91 @@ export default function OwnerPage() {
     }
   };
 
+  // --- SYMPTOM CATEGORY HANDLERS (ADD / EDIT / REMOVE) ---
+  const resetSymptomCatForm = () => {
+    setEditingSymptomCatId(null);
+    setSymProblem("");
+    setSymHindiLabel("");
+    setSymDescription("");
+  };
+
+  const handleSaveSymptomCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!symProblem.trim()) return;
+
+    let updated: SymptomCategory[];
+    let newCreatedId = "";
+
+    if (editingSymptomCatId) {
+      updated = symptoms.map((cat) =>
+        cat.id === editingSymptomCatId
+          ? {
+              ...cat,
+              problem: symProblem.trim(),
+              hindiLabel: symHindiLabel.trim() || symProblem.trim(),
+              description:
+                symDescription.trim() ||
+                "Common medicines available at Kajal Medical Hall.",
+            }
+          : cat
+      );
+    } else {
+      newCreatedId = `symptom-${Date.now()}`;
+      const newCategory: SymptomCategory = {
+        id: newCreatedId,
+        problem: symProblem.trim(),
+        hindiLabel: symHindiLabel.trim() || symProblem.trim(),
+        iconName: "stomach",
+        description:
+          symDescription.trim() ||
+          "Common medicines available at Kajal Medical Hall.",
+        medicines: [],
+      };
+      updated = [...symptoms, newCategory];
+    }
+
+    try {
+      await saveSymptomGuide(updated);
+      setSymptoms(updated);
+      if (newCreatedId) {
+        setSelectedSymptomId(newCreatedId);
+      }
+      showToast(
+        editingSymptomCatId
+          ? "Symptom category updated live!"
+          : "New symptom category added live!"
+      );
+      resetSymptomCatForm();
+    } catch (err) {
+      handleSaveError(err);
+    }
+  };
+
+  const handleEditSymptomCategoryClick = (cat: SymptomCategory) => {
+    setEditingSymptomCatId(cat.id);
+    setSymProblem(cat.problem);
+    setSymHindiLabel(cat.hindiLabel);
+    setSymDescription(cat.description || "");
+  };
+
+  const handleDeleteSymptomCategory = async (symptomId: string) => {
+    const updated = symptoms.filter((cat) => cat.id !== symptomId);
+    try {
+      await saveSymptomGuide(updated);
+      setSymptoms(updated);
+      if (editingSymptomCatId === symptomId) {
+        resetSymptomCatForm();
+      }
+      if (selectedSymptomId === symptomId) {
+        setSelectedSymptomId(updated.length > 0 ? updated[0].id : "");
+      }
+      showToast("Symptom category removed.");
+    } catch (err) {
+      handleSaveError(err);
+    }
+  };
+
+  // --- SYMPTOM MEDICINE HANDLERS ---
   const handleAddSymptomMedicine = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSymptomId || !medName.trim()) return;
@@ -410,7 +505,7 @@ export default function OwnerPage() {
 
   const handleRemoveSymptomMedicine = async (
     symptomId: string,
-    medicineIndex: number,
+    medicineIndex: number
   ) => {
     const updated = symptoms.map((cat) => {
       if (cat.id !== symptomId) return cat;
@@ -438,6 +533,7 @@ export default function OwnerPage() {
       setOwnerPhotoState(null);
       setCategories(getStoreCategories());
       setSymptoms(getSymptomGuide());
+      resetSymptomCatForm();
       showToast("All live settings restored to default.");
     } catch (err) {
       handleSaveError(err);
@@ -615,7 +711,7 @@ export default function OwnerPage() {
             }`}
           >
             <Pill className="h-4 w-4" />
-            3. Symptom Guide Medicines
+            3. Symptom Guide ({symptoms.length})
           </motion.button>
 
           <motion.button
@@ -844,7 +940,7 @@ export default function OwnerPage() {
                       value={stockCategory}
                       onChange={(e) =>
                         setStockCategory(
-                          e.target.value as "Human Healthcare" | "Veterinary",
+                          e.target.value as "Human Healthcare" | "Veterinary"
                         )
                       }
                       className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
@@ -999,10 +1095,101 @@ export default function OwnerPage() {
           </div>
         )}
 
-        {/* TAB 3: SYMPTOM GUIDE MEDICINES MANAGER */}
+        {/* TAB 3: SYMPTOM GUIDE & MEDICINES MANAGER */}
         {activeTab === "symptoms" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-12">
-            <div className="lg:col-span-5">
+            {/* Left Column: Add/Edit Symptom Category + Add Medicine to Symptom */}
+            <div className="space-y-6 lg:col-span-5">
+              {/* Form 1: Add / Edit Symptom Category */}
+              <form
+                onSubmit={handleSaveSymptomCategory}
+                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              >
+                <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                  {editingSymptomCatId
+                    ? "Edit Symptom Category"
+                    : "Add New Symptom Category"}
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                  Create or edit a health problem section on the Medicines page.
+                </p>
+
+                <div className="mt-4 space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Symptom / Problem Name (English) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={symProblem}
+                      onChange={(e) => setSymProblem(e.target.value)}
+                      placeholder="e.g. Acidity & Gas"
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Hindi Label
+                    </label>
+                    <input
+                      type="text"
+                      value={symHindiLabel}
+                      onChange={(e) => setSymHindiLabel(e.target.value)}
+                      placeholder="e.g. एसिडिटी और पेट में गैस"
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Short Description
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={symDescription}
+                      onChange={(e) => setSymDescription(e.target.value)}
+                      placeholder="Brief description of symptoms or relief options..."
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      type="submit"
+                      className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-emerald-700"
+                    >
+                      {editingSymptomCatId ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Update Symptom
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4" />
+                          Add Symptom Category
+                        </>
+                      )}
+                    </motion.button>
+
+                    {editingSymptomCatId && (
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        type="button"
+                        onClick={resetSymptomCatForm}
+                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                        title="Cancel editing"
+                      >
+                        <X className="h-4 w-4" />
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
+              </form>
+
+              {/* Form 2: Add Medicine inside a Symptom Category */}
               <form
                 onSubmit={handleAddSymptomMedicine}
                 className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -1019,7 +1206,8 @@ export default function OwnerPage() {
                     <select
                       value={selectedSymptomId}
                       onChange={(e) => setSelectedSymptomId(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                      disabled={symptoms.length === 0}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                     >
                       {symptoms.map((sym) => (
                         <option key={sym.id} value={sym.id}>
@@ -1073,7 +1261,8 @@ export default function OwnerPage() {
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     type="submit"
-                    className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-emerald-700"
+                    disabled={symptoms.length === 0}
+                    className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                   >
                     <Plus className="h-4 w-4" />
                     Add Medicine
@@ -1082,59 +1271,96 @@ export default function OwnerPage() {
               </form>
             </div>
 
+            {/* Right Column: Existing Symptom Categories & Medicines */}
             <div className="space-y-4 lg:col-span-7">
-              {symptoms.map((cat) => (
-                <div
-                  key={cat.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <h3 className="text-base font-black text-slate-900 dark:text-white">
-                    {cat.problem}{" "}
-                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      ({cat.hindiLabel})
-                    </span>
-                  </h3>
-
-                  <div className="mt-3 space-y-2">
-                    {cat.medicines.length === 0 ? (
-                      <p className="text-xs text-slate-400">
-                        No medicines listed under this problem yet.
-                      </p>
-                    ) : (
-                      cat.medicines.map((med, idx) => (
-                        <div
-                          key={`${cat.id}-${med.name}-${idx}`}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-950"
-                        >
-                          <div>
-                            <p className="text-sm font-extrabold text-slate-900 dark:text-white">
-                              {med.name}{" "}
-                              <span className="ml-1.5 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                {med.ageGroup}
-                              </span>
-                            </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {med.usageNote}
-                            </p>
-                          </div>
-
-                          <motion.button
-                            whileTap={{ scale: 0.92 }}
-                            type="button"
-                            onClick={() =>
-                              handleRemoveSymptomMedicine(cat.id, idx)
-                            }
-                            className="shrink-0 cursor-pointer rounded-lg bg-rose-50 p-2 text-rose-600 transition hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-300"
-                            title="Remove medicine"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </motion.button>
-                        </div>
-                      ))
-                    )}
-                  </div>
+              {symptoms.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                  No symptom categories yet. Add one using the form on the left.
                 </div>
-              ))}
+              ) : (
+                symptoms.map((cat) => (
+                  <div
+                    key={cat.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-black text-slate-900 dark:text-white">
+                          {cat.problem}{" "}
+                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            ({cat.hindiLabel})
+                          </span>
+                        </h3>
+                        {cat.description && (
+                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            {cat.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <motion.button
+                          whileTap={{ scale: 0.94 }}
+                          type="button"
+                          onClick={() => handleEditSymptomCategoryClick(cat)}
+                          className="inline-flex cursor-pointer items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.94 }}
+                          type="button"
+                          onClick={() => handleDeleteSymptomCategory(cat.id)}
+                          className="inline-flex cursor-pointer items-center gap-1 rounded-xl bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-300"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </motion.button>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {cat.medicines.length === 0 ? (
+                        <p className="text-xs text-slate-400">
+                          No medicines listed under this problem yet.
+                        </p>
+                      ) : (
+                        cat.medicines.map((med, idx) => (
+                          <div
+                            key={`${cat.id}-${med.name}-${idx}`}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-950"
+                          >
+                            <div>
+                              <p className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                {med.name}{" "}
+                                <span className="ml-1.5 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                  {med.ageGroup}
+                                </span>
+                              </p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                {med.usageNote}
+                              </p>
+                            </div>
+
+                            <motion.button
+                              whileTap={{ scale: 0.92 }}
+                              type="button"
+                              onClick={() =>
+                                handleRemoveSymptomMedicine(cat.id, idx)
+                              }
+                              className="shrink-0 cursor-pointer rounded-lg bg-rose-50 p-2 text-rose-600 transition hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-300"
+                              title="Remove medicine"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </motion.button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

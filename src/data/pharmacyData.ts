@@ -1,3 +1,12 @@
+export interface StoreCategoryItem {
+  id: string;
+  category: "Human Healthcare" | "Veterinary";
+  badge?: string;
+  name: string;
+  description: string;
+  unit: string;
+}
+
 export interface SymptomMedicine {
   name: string;
   ageGroup: string;
@@ -9,16 +18,8 @@ export interface SymptomCategory {
   problem: string;
   hindiLabel: string;
   iconName: "headache" | "stomach" | "bodypain" | "cold" | "fever";
+  description?: string;
   medicines: SymptomMedicine[];
-}
-
-export interface StoreCategoryItem {
-  id: string;
-  category: "Human Healthcare" | "Veterinary";
-  badge?: string;
-  name: string;
-  description: string;
-  unit: string;
 }
 
 export const PHARMACY_CONFIG = {
