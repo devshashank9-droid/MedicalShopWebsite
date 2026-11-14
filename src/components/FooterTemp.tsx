@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
 import {
   Award,
   MapPin,
@@ -15,6 +17,9 @@ import { useLanguage } from "@/context/LanguageContext";
 
 export default function Footer() {
   const { lang } = useLanguage();
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
+
   const whatsappUrl = `https://wa.me/${PHARMACY_CONFIG.whatsappNumber.replace(
     /\D/g,
     ""
@@ -25,7 +30,7 @@ export default function Footer() {
   )}`;
 
   return (
-    <footer className="border-t border-slate-800 bg-slate-900 pt-16 pb-24 text-white sm:pb-16">
+    <footer className="relative overflow-hidden border-t border-slate-800 bg-slate-900 pt-16 pb-24 text-white sm:pb-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid gap-10 lg:grid-cols-12">
           {/* Left: Heritage & Owner Card */}
@@ -169,6 +174,32 @@ export default function Footer() {
             ? "सहवाजपुर पुरैना, पातेपुर, वैशाली, बिहार"
             : PHARMACY_CONFIG.address}
         </div>
+
+        {/* Big Translucent Animated Signature — Home Page Only */}
+        {isHomePage && (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="pointer-events-none mt-8 select-none pt-4 text-center"
+          >
+            <p className="bg-gradient-to-r from-emerald-400/20 via-white/20 to-teal-400/20 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-5xl md:text-6xl">
+              Built by shAshAnk with{" "}
+              <motion.span
+                animate={{ scale: [1, 1.25, 1] }}
+                transition={{
+                  duration: 1.4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="inline-block text-rose-400/50"
+              >
+                ❤️
+              </motion.span>
+            </p>
+          </motion.div>
+        )}
       </div>
     </footer>
   );
