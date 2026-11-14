@@ -1,5 +1,10 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  setLogLevel,
+  Firestore,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,13 +16,27 @@ const firebaseConfig = {
 };
 
 export const isFirebaseConfigured = Boolean(
-  firebaseConfig.apiKey && firebaseConfig.projectId
+  firebaseConfig.apiKey &&
+    firebaseConfig.projectId &&
+    firebaseConfig.appId
 );
 
-const app = isFirebaseConfigured
-  ? getApps().length > 0
-    ? getApp()
-    : initializeApp(firebaseConfig)
-  : null;
+let db: Firestore | null = null;
 
-export const db = app ? getFirestore(app) : null;
+if (isFirebaseConfigured) {
+  const isNewApp = !getApps().length;
+  const app = isNewApp ? initializeApp(firebaseConfig) : getApp();
+
+  // Prevent Next.js dev overlay from popping up on brief Wi-Fi drops
+  setLogLevel("silent");
+
+  if (isNewApp) {
+    db = initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+    });
+  } else {
+    db = getFirestore(app);
+  }
+}
+
+export { db };
