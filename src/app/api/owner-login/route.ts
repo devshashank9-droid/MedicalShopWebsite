@@ -13,10 +13,21 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { password } = await request.json();
-    const rawEnv = process.env.OWNER_PASSWORD || "kajal1994";
+    const rawEnv = process.env.OWNER_PASSWORD;
+    if (!rawEnv) {
+      console.error("OWNER_PASSWORD environment variable is not set.");
+      return NextResponse.json(
+        { success: false, message: "Owner login is not configured." },
+        { status: 500 },
+      );
+    }
     const expectedPassword = rawEnv.trim().replace(/^["']|["']$/g, "");
 
-    if (typeof password === "string" && password.trim() === expectedPassword) {
+    if (
+      expectedPassword &&
+      typeof password === "string" &&
+      password.trim() === expectedPassword
+    ) {
       const response = NextResponse.json({ success: true });
       response.cookies.set(OWNER_COOKIE_NAME, createSessionToken(), {
         httpOnly: true,
